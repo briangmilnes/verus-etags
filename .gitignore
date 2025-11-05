@@ -1,0 +1,6 @@
+/target
+TAGS
+mytags
+test_tags
+*.tags
+verus-lang/
