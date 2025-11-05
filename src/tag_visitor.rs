@@ -157,7 +157,7 @@ impl<'a> TagVisitor<'a> {
         0
     }
 
-    fn extract_pattern(&self, byte_offset: usize, name: &str) -> String {
+    fn extract_pattern(&self, byte_offset: usize, _name: &str) -> String {
         // Find the line containing the definition
         let line_start = self.source[..byte_offset]
             .rfind('\n')
@@ -171,17 +171,10 @@ impl<'a> TagVisitor<'a> {
 
         let line = &self.source[line_start..line_end];
         
-        // For multi-line signatures, just use the identifier name as the pattern
-        // to avoid matching issues. Emacs will use line+offset to find the exact location.
-        let trimmed = line.trim();
-        if trimmed.ends_with('(') || (trimmed.contains('(') && !trimmed.contains(')')) {
-            // Multi-line function signature, use just the name
-            name.to_string()
-        } else {
-            // Single line, use the whole line WITH INDENTATION (like ctags does)
-            // Remove only trailing whitespace, keep leading indentation
-            line.trim_end().to_string()
-        }
+        // Always use the whole line as the pattern (with indentation preserved)
+        // Emacs will use line+offset to find the exact location, and the pattern
+        // helps with verification and search
+        line.trim_end().to_string()
     }
 
 }
