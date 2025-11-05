@@ -76,8 +76,14 @@ fn main() -> Result<()> {
                 if args.verbose_mode {
                     eprintln!("Processing file: {}", path.display());
                 }
-                let tags = process_file(path)?;
-                all_tags.push((path.clone(), tags));
+                match process_file(path) {
+                    Ok(tags) => all_tags.push((path.clone(), tags)),
+                    Err(e) => {
+                        if args.verbose_mode {
+                            eprintln!("Warning: Skipping file {}: {}", path.display(), e);
+                        }
+                    }
+                }
             }
         } else if path.is_dir() {
             if should_recurse {
@@ -112,8 +118,14 @@ fn main() -> Result<()> {
                         if args.verbose_mode {
                             eprintln!("Processing file: {}", file_path.display());
                         }
-                        let tags = process_file(file_path)?;
-                        all_tags.push((file_path.to_path_buf(), tags));
+                        match process_file(file_path) {
+                            Ok(tags) => all_tags.push((file_path.to_path_buf(), tags)),
+                            Err(e) => {
+                                if args.verbose_mode {
+                                    eprintln!("Warning: Skipping file {}: {}", file_path.display(), e);
+                                }
+                            }
+                        }
                     }
                 }
             } else {
@@ -125,8 +137,14 @@ fn main() -> Result<()> {
                             if args.verbose_mode {
                                 eprintln!("Processing file: {}", file_path.display());
                             }
-                            let tags = process_file(&file_path)?;
-                            all_tags.push((file_path, tags));
+                            match process_file(&file_path) {
+                                Ok(tags) => all_tags.push((file_path, tags)),
+                                Err(e) => {
+                                    if args.verbose_mode {
+                                        eprintln!("Warning: Skipping file {}: {}", file_path.display(), e);
+                                    }
+                                }
+                            }
                         }
                     }
                 }
