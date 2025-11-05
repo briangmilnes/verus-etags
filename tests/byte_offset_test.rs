@@ -96,7 +96,7 @@ fn test_byte_offset_with_multiline_code() {
     let _ = fs::remove_file(output_file);
 
     let output = Command::new("./target/release/verus-etags")
-        .args(&["-o", output_file, "test_data/sample.rs"])
+        .args(&["-o", output_file, "test_data/simple.rs"])
         .output()
         .expect("Failed to execute verus-etags");
 
@@ -105,8 +105,8 @@ fn test_byte_offset_with_multiline_code() {
     let tags_content = fs::read_to_string(output_file)
         .expect("Failed to read TAGS file");
 
-    // Should contain tags from the sample file
-    assert!(tags_content.contains("sample.rs"));
+    // Should contain tags from the simple file
+    assert!(tags_content.contains("simple.rs"));
 
     fs::remove_file(output_file).ok();
 }

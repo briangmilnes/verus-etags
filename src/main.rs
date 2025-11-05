@@ -165,7 +165,7 @@ fn process_file(path: &Path) -> Result<Vec<Tag>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    let syntax_tree = syn::parse_file(&content)
+    let syntax_tree = verus_syn::parse_file(&content)
         .with_context(|| format!("Failed to parse file: {}", path.display()))?;
 
     let mut visitor = TagVisitor::new(&content);

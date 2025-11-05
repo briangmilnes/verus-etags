@@ -1,4 +1,4 @@
-use verus_syn::*;
+use verus_syn::{self as syn, *};
 use syn::visit::Visit;
 use proc_macro2::Span;
 
@@ -25,7 +25,7 @@ impl<'a> TagVisitor<'a> {
     }
 
     pub fn visit_file(&mut self, file: &'a File) {
-        syn::visit::visit_file(self, file);
+        verus_syn::visit::visit_file(self, file);
     }
 
     pub fn tags(self) -> Vec<Tag> {
@@ -184,16 +184,6 @@ impl<'a> TagVisitor<'a> {
         }
     }
 
-    fn extract_fn_mode(fn_mode: &FnMode) -> Option<&'static str> {
-        match fn_mode {
-            FnMode::Spec(_) => Some("spec"),
-            FnMode::SpecChecked(_) => Some("spec(checked)"),
-            FnMode::Proof(_) => Some("proof"),
-            FnMode::ProofAxiom(_) => Some("axiom"),
-            FnMode::Exec(_) => Some("exec"),
-            FnMode::Default => None,
-        }
-    }
 }
 
 impl<'a> Visit<'a> for TagVisitor<'a> {
