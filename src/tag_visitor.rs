@@ -314,3 +314,107 @@ impl<'a> Visit<'a> for TagVisitor<'a> {
     }
 }
 
+// Support for regular syn parser (fallback for pure Rust files)
+impl<'a> TagVisitor<'a> {
+    pub fn visit_file_regular_syn(&mut self, file: &'a ::syn::File) {
+        use ::syn::visit::Visit as RegularVisit;
+        RegularVisit::visit_file(self, file);
+    }
+}
+
+impl<'a> ::syn::visit::Visit<'a> for TagVisitor<'a> {
+    fn visit_item_fn(&mut self, node: &'a ::syn::ItemFn) {
+        let name = node.sig.ident.to_string();
+        self.add_tag(name, node.sig.ident.span());
+        ::syn::visit::visit_item_fn(self, node);
+    }
+
+    fn visit_item_struct(&mut self, node: &'a ::syn::ItemStruct) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_struct(self, node);
+    }
+
+    fn visit_item_enum(&mut self, node: &'a ::syn::ItemEnum) {
+        let name = node.ident.to_string();
+        self.add_tag(name.clone(), node.ident.span());
+        
+        for variant in &node.variants {
+            let variant_name = format!("{}::{}", name, variant.ident);
+            self.add_tag(variant_name, variant.ident.span());
+        }
+        
+        ::syn::visit::visit_item_enum(self, node);
+    }
+
+    fn visit_item_trait(&mut self, node: &'a ::syn::ItemTrait) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_trait(self, node);
+    }
+
+    fn visit_item_impl(&mut self, node: &'a ::syn::ItemImpl) {
+        if let ::syn::Type::Path(type_path) = &*node.self_ty {
+            if let Some(segment) = type_path.path.segments.last() {
+                let impl_name = if let Some((_, trait_path, _)) = &node.trait_ {
+                    if let Some(trait_segment) = trait_path.segments.last() {
+                        format!("impl {} for {}", trait_segment.ident, segment.ident)
+                    } else {
+                        format!("impl {}", segment.ident)
+                    }
+                } else {
+                    format!("impl {}", segment.ident)
+                };
+                
+                self.add_tag(impl_name, segment.ident.span());
+            }
+        }
+        
+        ::syn::visit::visit_item_impl(self, node);
+    }
+
+    fn visit_impl_item_fn(&mut self, node: &'a ::syn::ImplItemFn) {
+        let name = node.sig.ident.to_string();
+        self.add_tag(name, node.sig.ident.span());
+        ::syn::visit::visit_impl_item_fn(self, node);
+    }
+
+    fn visit_trait_item_fn(&mut self, node: &'a ::syn::TraitItemFn) {
+        let name = node.sig.ident.to_string();
+        self.add_tag(name, node.sig.ident.span());
+        ::syn::visit::visit_trait_item_fn(self, node);
+    }
+
+    fn visit_item_type(&mut self, node: &'a ::syn::ItemType) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_type(self, node);
+    }
+
+    fn visit_item_const(&mut self, node: &'a ::syn::ItemConst) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_const(self, node);
+    }
+
+    fn visit_item_static(&mut self, node: &'a ::syn::ItemStatic) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_static(self, node);
+    }
+
+    fn visit_item_mod(&mut self, node: &'a ::syn::ItemMod) {
+        let name = node.ident.to_string();
+        self.add_tag(name, node.ident.span());
+        ::syn::visit::visit_item_mod(self, node);
+    }
+
+    fn visit_item_macro(&mut self, node: &'a ::syn::ItemMacro) {
+        if let Some(ident) = &node.ident {
+            let name = ident.to_string();
+            self.add_tag(name, ident.span());
+        }
+        ::syn::visit::visit_item_macro(self, node);
+    }
+}
+

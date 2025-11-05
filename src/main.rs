@@ -183,14 +183,23 @@ fn process_file(path: &Path) -> Result<Vec<Tag>> {
     let content = fs::read_to_string(path)
         .with_context(|| format!("Failed to read file: {}", path.display()))?;
 
-    let syntax_tree = verus_syn::parse_file(&content)
-        .with_context(|| format!("Failed to parse file: {}", path.display()))?;
+    // Try verus_syn first (handles Verus-specific syntax)
+    if let Ok(syntax_tree) = verus_syn::parse_file(&content) {
+        let mut visitor = TagVisitor::new(&content);
+        visitor.visit_file(&syntax_tree);
+        
+        // Also try to extract tags from verus! macro invocations
+        visitor.process_verus_macros(&syntax_tree);
+
+        return Ok(visitor.tags());
+    }
+
+    // Fall back to regular syn parser (for pure Rust files like compiler internals)
+    let syntax_tree = syn::parse_file(&content)
+        .with_context(|| format!("Failed to parse file with both verus_syn and syn: {}", path.display()))?;
 
     let mut visitor = TagVisitor::new(&content);
-    visitor.visit_file(&syntax_tree);
-    
-    // Also try to extract tags from verus! macro invocations
-    visitor.process_verus_macros(&syntax_tree);
+    visitor.visit_file_regular_syn(&syntax_tree);
 
     Ok(visitor.tags())
 }

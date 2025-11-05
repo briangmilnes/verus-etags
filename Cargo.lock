@@ -186,6 +186,7 @@ dependencies = [
  "clap",
  "proc-macro2",
  "quote",
+ "syn",
  "verus_syn",
  "walkdir",
 ]
