@@ -152,10 +152,13 @@ The tool automatically uses the Verus-extended syntax parser from the included `
    - Recursively extracts all items within the macro
    - Preserves all Verus mode annotations
 
-5. **Tag Generation**: Writes tags in Emacs etags format with:
+5. **Tag Sorting**: Tags are sorted by line number within each file (required for efficient Emacs xref lookup)
+
+6. **Tag Generation**: Writes tags in Emacs etags format with:
    - Clean tag names (e.g., `my_function`, not `my_function (spec)`)
    - Full source patterns for matching
    - Accurate byte offsets for navigation
+   - Tags ordered by line number for optimal Emacs performance
 
 ## Etags Format
 
@@ -210,7 +213,7 @@ Or use a file watcher to regenerate on save.
 
 ## Testing
 
-The project includes comprehensive tests (30 tests total):
+The project includes comprehensive tests (33 tests total):
 
 ```bash
 # Run all tests
@@ -223,6 +226,7 @@ cargo test -- --nocapture
 cargo test byte_offset
 cargo test verus_syntax
 cargo test cli_switches
+cargo test tag_ordering
 ```
 
 Test coverage includes:
@@ -233,6 +237,7 @@ Test coverage includes:
 - Pattern matching for multi-line declarations
 - Emacs temp file filtering
 - Append mode and sorting
+- Tag line-number ordering (critical for Emacs xref performance)
 
 ## Verified on Real Projects
 
