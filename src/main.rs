@@ -207,10 +207,17 @@ fn process_file(path: &Path) -> Result<Vec<Tag>> {
 fn sort_tags(all_tags: &mut Vec<(PathBuf, Vec<Tag>)>, foldcase: bool) {
     for (_path, tags) in all_tags.iter_mut() {
         tags.sort_by(|a, b| {
-            if foldcase {
-                a.name.to_lowercase().cmp(&b.name.to_lowercase())
-            } else {
-                a.name.cmp(&b.name)
+            // Primary sort: by line number (for etags format compatibility)
+            // Secondary sort: by name (with optional case-folding)
+            match a.line.cmp(&b.line) {
+                std::cmp::Ordering::Equal => {
+                    if foldcase {
+                        a.name.to_lowercase().cmp(&b.name.to_lowercase())
+                    } else {
+                        a.name.cmp(&b.name)
+                    }
+                }
+                other => other,
             }
         });
     }
