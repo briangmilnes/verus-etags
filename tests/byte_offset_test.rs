@@ -67,7 +67,7 @@ fn test_pattern_matches_file_content() {
     let tags_content = fs::read_to_string(output_file)
         .expect("Failed to read TAGS file");
 
-    let source_content = fs::read_to_string("test_data/simple.rs")
+    let _source_content = fs::read_to_string("test_data/simple.rs")
         .expect("Failed to read source file");
 
     // Verify that patterns actually exist in the source
