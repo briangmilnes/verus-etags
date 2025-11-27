@@ -33,22 +33,36 @@ impl<'a> TagVisitor<'a> {
     }
 
     /// Process verus! and verus_! macro invocations to extract spec/proof/exec functions
+    /// This recursively searches through modules to find verus! macros
     pub fn process_verus_macros(&mut self, file: &File) {
-        for item in &file.items {
-            if let Item::Macro(item_macro) = item {
-                // Check if this is a verus!, verus_!, or verus_impl! macro
-                let ident = item_macro.mac.path.segments.last().map(|seg| &seg.ident);
-                let is_verus_macro = ident.map(|id| {
-                    id == "verus" || id == "verus_" || id == "verus_impl"
-                }).unwrap_or(false);
-                
-                if is_verus_macro {
-                    // Try to parse the macro contents as a File
-                    if let Ok(inner_file) = syn::parse2::<File>(item_macro.mac.tokens.clone()) {
-                        // Manually process items from the verus! macro
-                        self.process_verus_items(&inner_file.items);
+        self.process_verus_macros_in_items(&file.items);
+    }
+    
+    fn process_verus_macros_in_items(&mut self, items: &[Item]) {
+        for item in items {
+            match item {
+                Item::Macro(item_macro) => {
+                    // Check if this is a verus!, verus_!, or verus_impl! macro
+                    let ident = item_macro.mac.path.segments.last().map(|seg| &seg.ident);
+                    let is_verus_macro = ident.map(|id| {
+                        id == "verus" || id == "verus_" || id == "verus_impl"
+                    }).unwrap_or(false);
+                    
+                    if is_verus_macro {
+                        // Try to parse the macro contents as a File
+                        if let Ok(inner_file) = syn::parse2::<File>(item_macro.mac.tokens.clone()) {
+                            // Manually process items from the verus! macro
+                            self.process_verus_items(&inner_file.items);
+                        }
                     }
                 }
+                Item::Mod(item_mod) => {
+                    // Recurse into module blocks to find verus! macros inside
+                    if let Some((_, ref items)) = item_mod.content {
+                        self.process_verus_macros_in_items(items);
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -79,16 +93,21 @@ impl<'a> TagVisitor<'a> {
                 Item::Impl(item_impl) => {
                     if let Type::Path(type_path) = &*item_impl.self_ty {
                         if let Some(segment) = type_path.path.segments.last() {
+                            let type_name = segment.ident.to_string();
                             let impl_name = if let Some((_, trait_path, _)) = &item_impl.trait_ {
                                 if let Some(trait_segment) = trait_path.segments.last() {
-                                    format!("impl {} for {}", trait_segment.ident, segment.ident)
+                                    format!("impl {} for {}", trait_segment.ident, type_name)
                                 } else {
-                                    format!("impl {}", segment.ident)
+                                    format!("impl {}", type_name)
                                 }
                             } else {
-                                format!("impl {}", segment.ident)
+                                format!("impl {}", type_name)
                             };
+                            // Add tag with full impl name for specific searches
                             self.add_tag(impl_name, segment.ident.span());
+                            
+                            // Also add tag with just the type name so M-. on the type finds impl blocks
+                            self.add_tag(type_name, segment.ident.span());
                         }
                     }
                     
@@ -115,6 +134,11 @@ impl<'a> TagVisitor<'a> {
                 Item::Mod(item_mod) => {
                     let name = item_mod.ident.to_string();
                     self.add_tag(name, item_mod.ident.span());
+                    
+                    // Recursively process items inside modules within verus! macros
+                    if let Some((_, ref items)) = item_mod.content {
+                        self.process_verus_items(items);
+                    }
                 }
                 Item::BroadcastGroup(item_bg) => {
                     let name = item_bg.ident.to_string();
@@ -217,21 +241,28 @@ impl<'a> Visit<'a> for TagVisitor<'a> {
 
     fn visit_item_impl(&mut self, node: &'a ItemImpl) {
         // For impl blocks, we tag the type being implemented
+        // We create TWO tags: one with the full "impl Trait for Type" name,
+        // and one with just the type name for easier navigation
         if let Type::Path(type_path) = &*node.self_ty {
             if let Some(segment) = type_path.path.segments.last() {
+                let type_name = segment.ident.to_string();
                 let impl_name = if let Some((_, trait_path, _)) = &node.trait_ {
                     // Trait implementation
                     if let Some(trait_segment) = trait_path.segments.last() {
-                        format!("impl {} for {}", trait_segment.ident, segment.ident)
+                        format!("impl {} for {}", trait_segment.ident, type_name)
                     } else {
-                        format!("impl {}", segment.ident)
+                        format!("impl {}", type_name)
                     }
                 } else {
                     // Inherent impl
-                    format!("impl {}", segment.ident)
+                    format!("impl {}", type_name)
                 };
                 
+                // Add tag with full impl name for specific searches
                 self.add_tag(impl_name, segment.ident.span());
+                
+                // Also add tag with just the type name so M-. on the type finds impl blocks
+                self.add_tag(type_name, segment.ident.span());
             }
         }
         
@@ -349,17 +380,22 @@ impl<'a> ::syn::visit::Visit<'a> for TagVisitor<'a> {
     fn visit_item_impl(&mut self, node: &'a ::syn::ItemImpl) {
         if let ::syn::Type::Path(type_path) = &*node.self_ty {
             if let Some(segment) = type_path.path.segments.last() {
+                let type_name = segment.ident.to_string();
                 let impl_name = if let Some((_, trait_path, _)) = &node.trait_ {
                     if let Some(trait_segment) = trait_path.segments.last() {
-                        format!("impl {} for {}", trait_segment.ident, segment.ident)
+                        format!("impl {} for {}", trait_segment.ident, type_name)
                     } else {
-                        format!("impl {}", segment.ident)
+                        format!("impl {}", type_name)
                     }
                 } else {
-                    format!("impl {}", segment.ident)
+                    format!("impl {}", type_name)
                 };
                 
+                // Add tag with full impl name for specific searches
                 self.add_tag(impl_name, segment.ident.span());
+                
+                // Also add tag with just the type name so M-. on the type finds impl blocks
+                self.add_tag(type_name, segment.ident.span());
             }
         }
         
