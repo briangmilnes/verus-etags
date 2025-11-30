@@ -89,6 +89,14 @@ impl<'a> TagVisitor<'a> {
                 Item::Trait(item_trait) => {
                     let name = item_trait.ident.to_string();
                     self.add_tag(name, item_trait.ident.span());
+                    
+                    // Process trait items (methods/functions)
+                    for trait_item in &item_trait.items {
+                        if let TraitItem::Fn(trait_item_fn) = trait_item {
+                            let fn_name = trait_item_fn.sig.ident.to_string();
+                            self.add_tag(fn_name, trait_item_fn.sig.ident.span());
+                        }
+                    }
                 }
                 Item::Impl(item_impl) => {
                     if let Type::Path(type_path) = &*item_impl.self_ty {
